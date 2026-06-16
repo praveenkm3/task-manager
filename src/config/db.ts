@@ -1,0 +1,24 @@
+import "dotenv/config";
+import "reflect-metadata";
+import { DataSource } from "typeorm";
+import { Users } from "../models/User.ts";
+import { Tasks } from "../models/Task.ts";
+
+const DB_USER=process.env.DB_USER
+const DB_HOST=process.env.DB_HOST       
+const DB_NAME=process.env.DB_NAME      
+const DB_PASSWORD=process.env.DB_PASSWORD   
+const DB_PORT=process.env.DB_PORT       
+// console.log(DB_USER,DB_HOST,DB_NAME,DB_PASSWORD,DB_PORT);
+export const AppDataSource = new DataSource({
+    type:DB_USER,
+    host:DB_HOST,
+    port: DB_PORT,
+    username: DB_USER,
+    password: DB_PASSWORD,
+    database: DB_NAME,
+    synchronize: true,
+    logging: true,
+    entities: [Users, Tasks],
+    migrations: ["src/migrations/**/*.ts"],
+})

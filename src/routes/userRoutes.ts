@@ -1,0 +1,9 @@
+import { Router } from "express";
+import { fetchTasks } from "../controllers/userController.ts";
+
+
+const router=Router();
+
+router.get('/fetch-tasks',fetchTasks);
+router.get('/fetch-tasks/:id',fetchTasks)
+export default router;
