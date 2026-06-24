@@ -10,7 +10,7 @@ interface tokenObject {
     userId:number
 }
 export function generateAccessToken({email,role,userId}:tokenObject){
-    const accessToken=jwt.sign({email,role,userId},ACCESS_SECRET,{expiresIn:"15m"});
+    const accessToken=jwt.sign({email,role,userId},ACCESS_SECRET,{expiresIn:"1m"});
     return accessToken;
 }
 

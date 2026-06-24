@@ -2,7 +2,7 @@ import { type Request, type Response } from "express";
 import bcrypt from "bcrypt";
 import { Users } from "../models/User.ts";
 import { AppDataSource } from "../config/db.ts";
-import { generateAccessToken,generateRefreshToken } from "./tokens.ts";
+import { generateAccessToken,generateRefreshToken, validateRefreshToken ,validateAccessToken} from "./tokens.ts";
 const ADMIN_SECRET_KEY = 1111;
 
 export async function register(req: Request, res: Response) {
@@ -73,14 +73,15 @@ export async function login(req: Request, res: Response) {
         
         res.cookie("accessToken", accessToken, {
         httpOnly: true,
-        maxAge: 15 * 60 * 1000,
+        maxAge: 1 * 60 * 1000,
         });
 
         res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
+        httpOnly: true, 
         maxAge: 7 * 24 * 60 * 60 * 1000,
         });
-        return res.status(200).json({"message":` ${getUser?.role} Login succussful ${email} `})
+        // console.log(refreshToken);
+        return res.status(200).json({"role":`${getUser?.role}`,"email":`${email}`});
     }else{
         return res.status(401).json({"message":"Incorrect Password"});
     }
@@ -88,3 +89,47 @@ export async function login(req: Request, res: Response) {
     return res.status(401).json({"message":"User not existed Register First"});
   }
 }
+export async function refresh(req: Request, res: Response){
+  // console.log(req.user); 
+  const accessToken=req?.cookies?.accessToken;
+  const refreshToken=req?.cookies?.refreshToken;
+  const verifyAccess=validateAccessToken(accessToken);
+  if(verifyAccess[0]){
+    console.log("Access token not expired");
+    return res.status(201).json(verifyAccess[1]);
+  }else{
+    console.log("Access token expired");
+    const verifyRefresh=validateRefreshToken(refreshToken);
+    if(verifyRefresh[0]){
+    console.log("refresh token not expired");
+
+      const payload=verifyRefresh[1];
+      const newAccess=await generateAccessToken(payload);
+      res.cookie("accessToken", newAccess, {
+        httpOnly: true,
+        maxAge: 1 * 60 * 1000,
+        });
+      console.log("new access token created")
+      return res.status(201).json(payload);
+    }else{
+      console.log("Tokens expired");
+      return res.status(401).json({"message":"Tokens Expired"});
+    }
+  }
+}
+export async function logout(req: Request, res: Response) {
+  res.clearCookie('accessToken', {
+    httpOnly: true
+  });
+  res.clearCookie('refreshToken', {
+    httpOnly: true
+  });
+  console.log("Log out success");
+  return res.status(200).json({"message":"Logout succussfully"})
+  
+}
+
+
+
+
+

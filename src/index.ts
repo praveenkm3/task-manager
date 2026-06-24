@@ -7,18 +7,27 @@ import adminRoutes from "./routes/adminRoutes.ts";
 import { AppDataSource } from "./config/db.ts";
 import { authMiddleware } from "./middlewares/authMiddleware.ts"; 
 import { adminMiddleware } from "./middlewares/adminMiddleware.ts";
-import {userMiddleware} from "./middlewares/userMiddleware.ts"
+import {userMiddleware} from "./middlewares/userMiddleware.ts" 
+import { refresh } from "./controllers/authController.ts";
+import cors from "cors";
 
 
 const PORT=process.env.PORT;
 const app=express();
 
+app.use(cors({
+    origin:"http://localhost:5173",
+    credentials:true
+}));
+
 app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 app.use(cookieParser());
+app.post('/api/refresh',refresh);
 app.use('/api/',authRoutes);
 app.use(authMiddleware);
-app.use('/user/',userMiddleware,userRoutes)
+
+app.use('/user/',userMiddleware,userRoutes);
 app.use('/admin/',adminMiddleware,adminRoutes);
 
 
