@@ -150,10 +150,34 @@ if (!req.body) {
     return res.status(200).json({"message":"No matched Records"})
   }
  }
+//fetch-task-status
+export const fetchStatusTasksAdmin:RequestHandler=async (req,res)=>{ 
+  const user=req.user;
+  const result = await AppDataSource.getRepository(Tasks)
+  .createQueryBuilder('task')
+  .select("status","taskStatusCount")
+  .addSelect("COUNT(task.taskId)","count")
+  .innerJoin("task.createdUser",'user')
+  .where("user.userId = :userId", { userId: user.userId })
+  .groupBy("task.status")
+  .getRawMany();
+     
+return res.status(200).json(result);
 
-//  await myDataSource
-//     .createQueryBuilder()
-//     .delete()
-//     .from(User)
-//     .where("id = :id", { id: 1 })
-//     .execute()
+}
+//fetch-task-user
+export const fetchAdminAssignedTasks:RequestHandler=async (req,res)=>{
+  const user=req.user;
+  const result=await AppDataSource.getRepository(Tasks)
+  .createQueryBuilder('task')
+  .innerJoinAndSelect("task.assignedUser","assignedUser")
+  .select([
+     "assignedUser.email","task.status"
+  ])
+  .addSelect("COUNT(task.taskId)","totalTasks")
+  .where("task.created_user_id= :userId",{userId:user.userId})
+  .groupBy("assignedUser.email, task.status")
+  .execute();
+  return res.status(200).json(result);
+
+}

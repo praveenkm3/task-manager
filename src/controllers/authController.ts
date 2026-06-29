@@ -73,12 +73,12 @@ export async function login(req: Request, res: Response) {
         
         res.cookie("accessToken", accessToken, {
         httpOnly: true,
-        maxAge: 1 * 60 * 1000,
+        maxAge: 15 * 60 * 1000,
         });
 
         res.cookie("refreshToken", refreshToken, {
         httpOnly: true, 
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 5 * 24 * 60 * 60 * 1000,
         });
         // console.log(refreshToken);
         return res.status(200).json({"role":`${getUser?.role}`,"email":`${email}`});
@@ -107,7 +107,7 @@ export async function refresh(req: Request, res: Response){
       const newAccess=await generateAccessToken(payload);
       res.cookie("accessToken", newAccess, {
         httpOnly: true,
-        maxAge: 1 * 60 * 1000,
+        maxAge: 15 * 60 * 1000,
         });
       console.log("new access token created")
       return res.status(201).json(payload);
