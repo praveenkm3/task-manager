@@ -29,45 +29,45 @@ export const addTask: RequestHandler = async (req, res) => {
   }
 };
 
-export const fetchTasks:RequestHandler=async (req,res)=>{
-  // return res.json({"hello":"bye"})
- const {id}=req.params;
-//  console.log(id);
-  const user=req.user;
-  if(id){
-  const result = await AppDataSource.getRepository(Tasks).find({
-    where: {
-      createdUser:{
-        userId: user.userId  
-      } ,
-      taskId:id
-    },
-    relations: {    
-        assignedUser: true   
-    }
-  });
-  if(result.length<=0){
-    return res.status(200).json({"message":"Task not Existed on your UserID"});
-  }
-  const values={
-    taskId:result[0]?.taskId,
-    title:result[0]?.title,
-    assigned_email:result[0]?.assignedUser.email,
+// export const fetchTasks:RequestHandler=async (req,res)=>{
+//   // return res.json({"hello":"bye"})
+//  const {id}=req.params;
+// //  console.log(id);
+//   const user=req.user;
+//   if(id){
+//   const result = await AppDataSource.getRepository(Tasks).find({
+//     where: {
+//       createdUser:{
+//         userId: user.userId  
+//       } ,
+//       taskId:id
+//     },
+//     relations: {    
+//         assignedUser: true   
+//     }
+//   });
+//   if(result.length<=0){
+//     return res.status(200).json({"message":"Task not Existed on your UserID"});
+//   }
+//   const values={
+//     taskId:result[0]?.taskId,
+//     title:result[0]?.title,
+//     assigned_email:result[0]?.assignedUser.email,
     
-  }
-  return res.status(200).json(result);
-}
- else{
-   const result=await AppDataSource.getRepository(Tasks)
-  .createQueryBuilder('tasks')
-  .innerJoinAndSelect("tasks.createdUser","createdUser")
-  .innerJoinAndSelect("tasks.assignedUser","assignedUser")
-  .where("createdUser.userId=:currentUserID",{currentUserID:req.user.userId})
-  .getMany();
+//   }
+//   return res.status(200).json(result);
+// }
+//  else{
+//    const result=await AppDataSource.getRepository(Tasks)
+//   .createQueryBuilder('tasks')
+//   .innerJoinAndSelect("tasks.createdUser","createdUser")
+//   .innerJoinAndSelect("tasks.assignedUser","assignedUser")
+//   .where("createdUser.userId=:currentUserID",{currentUserID:req.user.userId})
+//   .getMany();
 
-  return res.status(200).json(result);
- }
-}
+//   return res.status(200).json(result);
+//  }
+// }
 
 export const fetchUsers:RequestHandler=async(req,res)=>{
   const users=await AppDataSource.getRepository(Users).find(
@@ -181,3 +181,93 @@ export const fetchAdminAssignedTasks:RequestHandler=async (req,res)=>{
   return res.status(200).json(result);
 
 }
+
+
+export const fetchTasks: RequestHandler = async (req, res) => {
+  console.log(req.body);
+  const {
+    filterColumn = "",
+    filterValue = "",
+    filterOperator = "",
+    page = 1,
+    records = 10,
+    sortColumnName = undefined,
+    sortOrder = undefined,
+  } = req.body;
+  const admin = req.user as unknown as {
+    userId: number;
+  };
+
+  const query = AppDataSource.getRepository(Tasks)
+    .createQueryBuilder("tasks")
+    .leftJoinAndSelect("tasks.assignedUser", "users")
+    .leftJoinAndSelect("tasks.createdUser", "admins")
+    .where("tasks.createdUser= :id", { id: admin?.userId });
+  //filter
+  if (filterColumn?.startsWith("users")) {
+    const column = filterColumn?.split("_")[1];
+    query.andWhere(`users.${column} ILIKE :value`, {
+      value: `%${filterValue}%`,
+    });
+  } else if (filterColumn?.startsWith("tasks")) {
+    if (filterColumn !== "" && filterValue !== "" && filterOperator !== "") {
+      const column = filterColumn?.split("_")[1];
+      query.andWhere(`tasks.${column} ILIKE :value`, {
+        value: `%${filterValue}%`,
+      });
+    }
+  }
+  query.select([
+    "tasks.taskId",
+    "tasks.title",
+    "tasks.description",
+    "tasks.status",
+    "users.email",
+    "admins.email",
+  ]);
+  if (sortColumnName?.startsWith("tasks")) {
+    const column = sortColumnName.split("_")[1];
+    if (sortColumnName && sortOrder == "asc") {
+      query.orderBy(`tasks.${column}`, "ASC");
+    } else if (sortColumnName && sortOrder === "desc") {
+      query.orderBy(`tasks.${column}`, "DESC");
+    }
+  } else if (sortColumnName?.startsWith("users")) {
+    const column = sortColumnName.split("_")[1];
+    if (sortColumnName && sortOrder == "asc") {
+      query.orderBy(`users.${column}`, "ASC");
+    } else if (sortColumnName && sortOrder === "desc") {
+      query.orderBy(`users.${column}`, "DESC");
+    }
+  }
+const totalRecords = await query.getCount();
+  //pagination
+  let pages = Math.abs(page - 1) * records;
+  query.offset(pages);
+  query.limit(records);
+
+  const result = await query.getRawMany();
+  return res.status(200).json({result:result,length:totalRecords});
+};
+
+
+export const SpecificTask: RequestHandler = async (req, res) => {
+  const { id } = req.params;
+  console.log("inside specific");
+  const admin = req.user as unknown as {
+    userId: number;
+  };
+  let result = await AppDataSource.getRepository(Tasks)
+    .createQueryBuilder("task")
+    .innerJoinAndSelect("task.createdUser", "createdUser")
+    .innerJoinAndSelect("task.assignedUser", "assignedUser")
+    .where("createdUser.userId=:currentUserId", {
+      currentUserId: admin.userId,
+    })
+    .andWhere("task.taskId=:currentTaskId", {
+      currentTaskId: parseInt(id as string),
+    })
+    .getMany();
+
+  res.status(200).json(result);
+};
