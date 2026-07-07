@@ -7,7 +7,9 @@ import {
   deleteTask,
   fetchStatusTasksAdmin,
   fetchAdminAssignedTasks,
-  SpecificTask
+  SpecificTask,
+  fetchPriorityCount,
+  fetchDates
 } from "../controllers/adminController.ts";
 const router = Router();
 
@@ -19,5 +21,7 @@ router.put("/update-task", updateTask);
 router.delete("/delete-task", deleteTask);
 router.get("/fetch-tasks-status", fetchStatusTasksAdmin);
 router.get("/fetch-tasks-user", fetchAdminAssignedTasks);
+router.get("/fetch-priority-count", fetchPriorityCount);
+router.get("/fetch-dates", fetchDates);
 
 export default router;

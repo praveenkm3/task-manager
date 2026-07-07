@@ -2,27 +2,15 @@ import { type RequestHandler } from "express";
 import { AppDataSource } from "../config/db.ts";
 import { Tasks } from "../models/Task.ts";
 import { Users } from "../models/User.ts";
+import { 
+  fetchStatusTasksQuery,
+  fetchDatesQuery,
+  fetchPriorityCountQuery,
+  fetchAdminCreatedTasksQuery,
+  SpecificTaskQuery,
+}from "./utils.ts";
 
-export const fetchTasksLength: RequestHandler = async (req, res) => {
-  try {
-    const user = req.user as any;
-    if (!user?.role) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized, user details Required." });
-    }
-    const counts = await AppDataSource.getRepository(Tasks).find({
-      where: {
-        assignedUser: {
-          userId: user.userId,
-        },
-      },
-    });
-    return res.status(200).json({ length: counts?.length || 0 });
-  } catch (error) {
-    return res.status(400).json({ "Error at fetching length": error });
-  }
-};
+
 export const fetchTasks: RequestHandler = async (req, res) => {
   try {
     console.log(req.body);
@@ -56,9 +44,26 @@ export const fetchTasks: RequestHandler = async (req, res) => {
     } else if (filterColumn?.startsWith("tasks")) {
       if (filterColumn !== "" && filterValue !== "" && filterOperator !== "") {
         const column = filterColumn?.split("_")[1];
-        query.andWhere(`tasks.${column} ILIKE :value`, {
-          value: `%${filterValue}%`,
-        });
+        // console.log(column);
+        if (column === "dueDate") {
+          // console.log("inside date filter");
+          const start = filterValue[0]?.split("T")[0];
+          const end = filterValue[1]?.split("T")[0];
+          console.log(start, end);
+          query.andWhere(`tasks.dueDate >= :start AND tasks.dueDate <= :end`, {
+            start: start,
+            end: end,
+          });
+        } else if (column === "priority") {
+          query.andWhere(`tasks.priority = :priority`, {
+            priority:
+              filterValue.charAt(0).toUpperCase() + filterValue.slice(1),
+          });
+        } else {
+          query.andWhere(`tasks.${column} ILIKE :value`, {
+            value: `%${filterValue}%`,
+          });
+        }
       }
     }
     query.select([
@@ -68,6 +73,8 @@ export const fetchTasks: RequestHandler = async (req, res) => {
       "tasks.status",
       "users.email",
       "admins.email",
+      "tasks.dueDate",
+      "tasks.priority",
     ]);
     //sort
     if (sortColumnName?.startsWith("tasks")) {
@@ -92,9 +99,11 @@ export const fetchTasks: RequestHandler = async (req, res) => {
     query.limit(records);
 
     const result = await query.getRawMany();
-    return res.status(200).json({ result: result || [], length: totalRecords || 0});
+    return res
+      .status(200)
+      .json({ result: result || [], length: totalRecords || 0 });
   } catch (error) {
-    return res.status(400).json({ "Error at fetching length": error });
+    return res.status(400).json({ "Error at fetching at records": error });
   }
 };
 export const updateTask: RequestHandler = async (req, res) => {
@@ -139,61 +148,75 @@ export const updateTask: RequestHandler = async (req, res) => {
 export const SpecificTask: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
-  if (!id) {
-      return res.status(400).json({ message: "Id required to fetch specific task" });
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "Id required to fetch specific task" });
     }
-  const user = req.user as any; 
+    const user = req.user as any;
     if (!user?.role) {
       return res
         .status(401)
         .json({ message: "Unauthorized, user details Required." });
     }
-  let result = await AppDataSource.getRepository(Tasks)
-    .createQueryBuilder("task")
-    .innerJoinAndSelect("task.createdUser", "createdUser")
-    .innerJoinAndSelect("task.assignedUser", "assignedUser")
-    .where("assignedUser.userId=:currentUserId", {
-      currentUserId: user.userId,
-    })
-    .andWhere("task.taskId=:currentTaskId", {
-      currentTaskId: parseInt(id as string),
-    })
-    .getMany();
-
-  res.status(200).json(result || []);
+    let result = await SpecificTaskQuery(user,id);
+    res.status(200).json(result || []);
   } catch (error) {
     return res.status(400).json({ "Error at fetching Specific task": error });
   }
 };
+//charts
 export const fetchStatusTasks: RequestHandler = async (req, res) => {
   try {
     const user = req.user as any;
-  if(!user?.role){
-    return res.status(400).json({ message: "UserId required to fetch statuses of tasks" });
-  }
-  const result = await AppDataSource.getRepository(Tasks)
-    .createQueryBuilder("task")
-    .select("status", "taskStatusCount")
-    .addSelect("COUNT(task.taskId)", "count")
-    .innerJoin("task.assignedUser", "user")
-    .where("user.userId = :userId", { userId: user.userId })
-    .groupBy("task.status")
-    .getRawMany();
-
-  return res.status(200).json(result || []);
+    if (!user?.role) {
+      return res
+        .status(400)
+        .json({ message: "UserId required to fetch statuses of tasks" });
+    }
+    const result = await fetchStatusTasksQuery(user);
+  
+    return res.status(200).json(result || []);
   } catch (error) {
-        return res.status(400).json({ "Error at fetch statuses of tasks": error });
+    return res.status(400).json({ "Error at fetch statuses of tasks": error });
   }
 };
 export const fetchAdminCreatedTasks: RequestHandler = async (req, res) => {
-  const user = req.user;
-  const result = await AppDataSource.getRepository(Tasks)
-    .createQueryBuilder("task")
-    .innerJoinAndSelect("task.createdUser", "createdUser")
-    .select(["createdUser.email", "task.status"])
-    .addSelect("COUNT(task.taskId)", "totalTasks")
-    .where("task.assigned_user_id= :userId", { userId: user.userId })
-    .groupBy("createdUser.email, task.status")
-    .execute();
-  return res.status(200).json(result);
+  try {
+    const user = req.user as any;
+    if (!user?.role) {
+      return res
+        .status(400)
+        .json({ message: "UserId required to fetch statuses of tasks" });
+    }
+    const result = await fetchAdminCreatedTasksQuery(user);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({ message: "Error at fetch Admin and tasks" });
+  }
+};
+export const fetchPriorityCount: RequestHandler = async (req, res) => {
+  try {
+    const user = req?.user as any;
+    const result =await fetchPriorityCountQuery(user);
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({ message: error });
+  }
+};
+//calendar
+export const fetchDates: RequestHandler = async (req, res) => {
+  try {
+    const user = req?.user as any;
+    if (!user?.role) {
+      return res
+        .status(400)
+        .json({ message: "UserId required to fetch statuses of tasks" });
+    }
+    const result=await fetchDatesQuery(user);
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({ message: "Error at fetching dates" });
+    }
 };

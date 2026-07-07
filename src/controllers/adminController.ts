@@ -2,9 +2,19 @@ import type { RequestHandler } from "express";
 import { AppDataSource } from "../config/db.ts";
 import { Tasks } from "../models/Task.ts";
 import { Users } from "../models/User.ts";
+import { 
+  fetchStatusTasksQuery,
+  fetchDatesQuery,
+  fetchPriorityCountQuery,
+  fetchAdminCreatedTasksQuery,
+  SpecificTaskQuery,
+ } from "./utils.ts";
 export const addTask: RequestHandler = async (req, res) => {
+  console.log(req.body);
+  // return;
   try {
-    const { title, description, assigned_user_id } = req.body;
+    const { title, description, assigned_user_id, dueDate, priority } =
+      req.body;
     if (!title || !description || !assigned_user_id) {
       return res.status(200).json({ message: "All task details required" });
     }
@@ -23,6 +33,8 @@ export const addTask: RequestHandler = async (req, res) => {
           description: description,
           assignedUser: assigned_user_id,
           createdUser: admin.userId,
+          dueDate: dueDate,
+          priority: priority,
         },
       ])
       .execute();
@@ -57,7 +69,7 @@ export const fetchUsers: RequestHandler = async (req, res) => {
 };
 export const updateTask: RequestHandler = async (req, res) => {
   try {
-    const { taskId, title, description, assigned_user_id } = req.body;
+    const { taskId, title, description, assigned_user_id,dueDate,priority } = req.body;
     if (!title || !description || !assigned_user_id) {
       return res.status(200).json({ message: "All task details required" });
     }
@@ -88,6 +100,8 @@ export const updateTask: RequestHandler = async (req, res) => {
         assignedUser: assigned_user_id,
         status: "pending",
         createdUser: admin.userId,
+        priority:priority,
+        dueDate:dueDate
       })
       .where("taskId=:ID", { ID: taskId })
       .execute();
@@ -128,9 +142,26 @@ export const fetchTasks: RequestHandler = async (req, res) => {
     } else if (filterColumn?.startsWith("tasks")) {
       if (filterColumn !== "" && filterValue !== "" && filterOperator !== "") {
         const column = filterColumn?.split("_")[1];
-        query.andWhere(`tasks.${column} ILIKE :value`, {
-          value: `%${filterValue}%`,
-        });
+        // console.log(column);
+        if (column === "dueDate") {
+          // console.log("inside date filter");
+          const start = filterValue[0].split('T')[0];
+          const end = filterValue[1].split('T')[0];
+          console.log(start,end);
+          query.andWhere(`tasks.dueDate >= :start AND tasks.dueDate <= :end`,{
+              start:start,end:end
+          })
+          
+        } else if (column === "priority") {
+          query.andWhere(`tasks.priority = :priority`, {
+            priority:
+              filterValue.charAt(0).toUpperCase() + filterValue.slice(1),
+          });
+        } else {
+          query.andWhere(`tasks.${column} ILIKE :value`, {
+            value: `%${filterValue}%`,
+          });
+        }
       }
     }
     query.select([
@@ -140,6 +171,8 @@ export const fetchTasks: RequestHandler = async (req, res) => {
       "tasks.status",
       "users.email",
       "admins.email",
+      "tasks.dueDate",
+      "tasks.priority",
     ]);
     if (sortColumnName?.startsWith("tasks")) {
       const column = sortColumnName.split("_")[1];
@@ -166,43 +199,6 @@ export const fetchTasks: RequestHandler = async (req, res) => {
     return res.status(200).json({ result: result, length: totalRecords });
   } catch (error) {
     return res.status(400).json({ "Error at fetching Total tasks": error });
-  }
-};
-export const SpecificTask: RequestHandler = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const taskId = parseInt(id as string);
-    if (typeof taskId !== "number") {
-      return res.status(400).json({ message: "Invalid Task Id" });
-    }
-    const admin = req.user as any;
-
-    if (!admin.userId) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized, admin details Required." });
-    }
-
-    const result = await AppDataSource.getRepository(Tasks)
-      .createQueryBuilder("task")
-      .innerJoinAndSelect("task.createdUser", "createdUser")
-      .innerJoinAndSelect("task.assignedUser", "assignedUser")
-      .where("createdUser.userId = :currentUserId", {
-        currentUserId: admin.userId,
-      })
-      .andWhere("task.taskId = :currentTaskId", {
-        currentTaskId: taskId,
-      })
-      .getMany();
-    if (result.length === 0) {
-      return res.status(404).json({
-        message: "Task not found or you do not have permission to view it.",
-      });
-    }
-
-    return res.status(200).json(result);
-  } catch (error) {
-    return res.status(400).json({ "Error fetching specific task": error });
   }
 };
 export const deleteTask: RequestHandler = async (req, res) => {
@@ -243,6 +239,33 @@ export const deleteTask: RequestHandler = async (req, res) => {
     return res.status(400).json({ "Error at Deleting task": error });
   }
 };
+export const SpecificTask: RequestHandler = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const taskId = parseInt(id as string);
+    if (typeof taskId !== "number") {
+      return res.status(400).json({ message: "Invalid Task Id" });
+    }
+    const admin = req.user as any;
+
+    if (!admin.userId) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized, admin details Required." });
+    }
+
+    const result = await SpecificTaskQuery(admin,id);
+    if (result.length === 0) {
+      return res.status(404).json({
+        message: "Task not found or you do not have permission to view it.",
+      });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({ "Error fetching specific task": error });
+  }
+};
 //charts
 export const fetchStatusTasksAdmin: RequestHandler = async (req, res) => {
   try {
@@ -252,14 +275,7 @@ export const fetchStatusTasksAdmin: RequestHandler = async (req, res) => {
         .status(401)
         .json({ message: "Unauthorized, admin details Required." });
     }
-    const result = await AppDataSource.getRepository(Tasks)
-      .createQueryBuilder("task")
-      .select("status", "taskStatusCount")
-      .addSelect("COUNT(task.taskId)", "count")
-      .innerJoin("task.createdUser", "user")
-      .where("user.userId = :userId", { userId: admin.userId })
-      .groupBy("task.status")
-      .getRawMany();
+    const result = await fetchStatusTasksQuery(admin);
     return res.status(200).json(result || []);
   } catch (error) {
     return res.status(400).json({ "Error at tetching task statuses": error });
@@ -273,18 +289,35 @@ export const fetchAdminAssignedTasks: RequestHandler = async (req, res) => {
         .status(401)
         .json({ message: "Unauthorized, admin details Required." });
     }
-    const result = await AppDataSource.getRepository(Tasks)
-      .createQueryBuilder("task")
-      .innerJoinAndSelect("task.assignedUser", "assignedUser")
-      .select(["assignedUser.email", "task.status"])
-      .addSelect("COUNT(task.taskId)", "totalTasks")
-      .where("task.created_user_id= :userId", { userId: admin.userId })
-      .groupBy("assignedUser.email, task.status")
-      .execute();
-    return res.status(200).json(result);
+    const data = await fetchAdminCreatedTasksQuery(admin);
+    return res.status(200).json(data);
   } catch (error) {
     return res
       .status(400)
       .json({ "Error at fetching tasks&user Counts": error });
+  }
+};
+export const fetchPriorityCount: RequestHandler = async (req, res) => {
+  try {
+    const admin = req?.user as any;
+    const result = await fetchPriorityCountQuery(admin);
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({ message: error });
+  }
+};
+//calendar
+export const fetchDates: RequestHandler = async (req, res) => {
+  try {
+    const admin = req?.user as any;
+    if (!admin?.role) {
+      return res
+        .status(400)
+        .json({ message: "AdminId required to fetch statuses of tasks" });
+    }
+    const result=await fetchDatesQuery(admin);
+    return res.status(200).json(result); 
+  } catch (error) {
+    return res.status(400).json({ message: error });
   }
 };
