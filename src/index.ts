@@ -11,6 +11,13 @@ import {userMiddleware} from "./middlewares/userMiddleware.ts"
 import { refresh } from "./controllers/authController.ts";
 import cors from "cors";
 
+//graphql
+import { expressMiddleware } from "@as-integrations/express5";
+import {server} from "./graphql/server.ts";
+
+await server.start();
+
+
 
 const PORT=process.env.PORT;
 const app=express();
@@ -23,6 +30,9 @@ app.use(cors({
 app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 app.use(cookieParser());
+//graphql
+app.use('/graphql',expressMiddleware(server));
+
 app.post('/api/refresh',refresh);
 app.use('/api/',authRoutes);
 app.use(authMiddleware);
