@@ -38,7 +38,7 @@ export class Tasks extends BaseEntity {
   @JoinColumn({ name: "assigned_user_id" })
   assignedUser!: Users;
 
-  @Column({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
+  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   dueDate!: Date;
 
   @Column({

@@ -24,18 +24,23 @@ const app=express();
 
 app.use(cors({
     origin:"http://localhost:5173",
-    credentials:true
+    credentials:true,
 }));
 
 app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 app.use(cookieParser());
-//graphql
-app.use('/graphql',expressMiddleware(server));
 
 app.post('/api/refresh',refresh);
 app.use('/api/',authRoutes);
 app.use(authMiddleware);
+
+//graphql
+app.use('/graphql',expressMiddleware(server,{
+    context:async ({req})=>{
+        return {req};
+    }
+}));
 
 app.use('/user/',userMiddleware,userRoutes);
 app.use('/admin/',adminMiddleware,adminRoutes);
