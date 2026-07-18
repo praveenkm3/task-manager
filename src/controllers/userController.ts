@@ -13,7 +13,7 @@ import {
 
 export const fetchTasks: RequestHandler = async (req, res) => {
   try {
-    console.log(req.body);
+    // console.log(req.body);
     const user = req.user as any;
     if (!user?.role) {
       return res
@@ -49,7 +49,7 @@ export const fetchTasks: RequestHandler = async (req, res) => {
           // console.log("inside date filter");
           const start = filterValue[0]?.split("T")[0];
           const end = filterValue[1]?.split("T")[0];
-          console.log(start, end);
+          // console.log(start, end);
           query.andWhere(`tasks.dueDate >= :start AND tasks.dueDate <= :end`, {
             start: start,
             end: end,

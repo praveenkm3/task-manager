@@ -23,7 +23,7 @@ export class Tasks extends BaseEntity {
   @Column({ type: "varchar", length: 200, nullable: false })
   description!: string;
 
-  @Column({ type: "varchar", length: 100, default: "pending" })
+  @Column({ type: "varchar", length: 100, default: "TO DO" })
   status!: string;
 
   @ManyToOne(() => Users, { onDelete: "SET NULL", nullable: true })

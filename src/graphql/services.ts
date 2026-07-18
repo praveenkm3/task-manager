@@ -1,4 +1,5 @@
 import { AppDataSource } from "../config/db.ts";
+import { generateAccessToken, generateRefreshToken } from "../controllers/tokens.ts";
 import {
   fetchAdminCreatedTasksQuery,
   fetchDatesQuery,
@@ -11,7 +12,7 @@ import { Users } from "../models/User.ts";
 
 export const fetchTasksForUsers = async (user: any, body: any = {}) => {
   try {
-    console.log(user, body);
+    // console.log(user, body);
     const {
       filterColumn,
       filterValue,
@@ -49,10 +50,6 @@ export const fetchTasksForUsers = async (user: any, body: any = {}) => {
         const column = filterColumn?.split("_")[1];
         // console.log(column);
         if (column === "dueDate") {
-          // console.log("inside date filter");
-          // const start = filterValue[0].split('T')[0];
-          // const end = filterValue[1].split('T')[0];
-          // console.log(filterValue[0],filterValue[1]);
           query.andWhere(`tasks.dueDate >= :start AND tasks.dueDate <= :end`, {
             start: filterValue[0],
             end: filterValue[1],
@@ -126,7 +123,7 @@ export const updateTaskForUsers = async (user: any, args: any) => {
       assigned_user_id,
       duedate,
       priority,
-      status,
+      status="TO DO",
     } = args;
     const role = user?.role;
     if (role == "admin") {
@@ -170,7 +167,7 @@ export const updateTaskForUsers = async (user: any, args: any) => {
           title: title,
           description: description,
           assignedUser: assigned_user_id,
-          status: "pending",
+          status: status,
           createdUser: user.userId,
           priority: priority,
           dueDate: duedate,

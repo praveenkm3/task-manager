@@ -11,6 +11,10 @@ import {userMiddleware} from "./middlewares/userMiddleware.ts"
 import { refresh } from "./controllers/authController.ts";
 import cors from "cors";
 
+//session
+import session from "express-session";
+
+
 //graphql
 import { expressMiddleware } from "@as-integrations/express5";
 import {server} from "./graphql/server.ts";
@@ -30,6 +34,16 @@ app.use(cors({
 app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 app.use(cookieParser());
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET!,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 5 * 60 * 1000
+    }
+  })
+);
 
 app.post('/api/refresh',refresh);
 app.use('/api/',authRoutes);
@@ -37,8 +51,8 @@ app.use(authMiddleware);
 
 //graphql
 app.use('/graphql',expressMiddleware(server,{
-    context:async ({req})=>{
-        return {req};
+    context:async ({req,res})=>{
+        return {req,res};
     }
 }));
 

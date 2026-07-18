@@ -8,9 +8,10 @@ import {
   fetchStatusTasks,
   fetchUserAndAdminStatuseTasks,
   fetchPriorityCountAdminAndUser,
-  fetchDatesForUserAndAdmin
+  fetchDatesForUserAndAdmin, 
 } from "./services.ts";
 import { GraphQLDateTime } from "graphql-scalars";
+
 
 export const resolvers = {
   Date: GraphQLDateTime,
@@ -31,7 +32,7 @@ export const resolvers = {
     getOneTask: async (parent: any, args: any, context: any, info: any) => {
       try {
         const user = context?.req?.user;
-        console.log(args);
+        // console.log(args);
         const { taskId } = args;
         const data = await SpecificTaskForUsers(user, taskId);
         // console.log(Array.isArray(result))
@@ -40,54 +41,69 @@ export const resolvers = {
         return "Error at Fetching Tasks";
       }
     },
-    fetchUsers:async(parent: any, args: any, context: any, info: any)=>{
-        try {
-            const user=context?.req?.user;
-            if (user?.role != "admin") {
-                return "Not Allowed to To See All users";
-            }
-            const result=await fetchUsersByAdmin(user);
-            return result;
-        } catch (error) {
-            return "Error at Fetching Users";
-        }
-    },
-    fetchTaskStatuses:async (parent: any, args: any, context: any, info: any)=>{
-        try {
+    fetchUsers: async (parent: any, args: any, context: any, info: any) => {
+      try {
         const user = context?.req?.user;
-        const result=await fetchStatusTasks(user);
-        return result; 
+        if (user?.role != "admin") {
+          return "Not Allowed to To See All users";
+        }
+        const result = await fetchUsersByAdmin(user);
+        return result;
+      } catch (error) {
+        return "Error at Fetching Users";
+      }
+    },
+    fetchTaskStatuses: async (
+      parent: any,
+      args: any,
+      context: any,
+      info: any,
+    ) => {
+      try {
+        const user = context?.req?.user;
+        const result = await fetchStatusTasks(user);
+        return result;
       } catch (error) {
         return "Error in Task Creation";
       }
     },
-    fetchUserAndAdminStatuses:async(parent: any, args: any, context: any, info: any)=>{
-        try {
+    fetchUserAndAdminStatuses: async (
+      parent: any,
+      args: any,
+      context: any,
+      info: any,
+    ) => {
+      try {
         const user = context?.req?.user;
-        const result=await fetchUserAndAdminStatuseTasks(user);
-        return result; 
-        } catch (error) {
-            return "Error in Task Creation";
-        }
+        const result = await fetchUserAndAdminStatuseTasks(user);
+        return result;
+      } catch (error) {
+        return "Error in Task Creation";
+      }
     },
-    fetchPriorityCount:async(parent: any, args: any, context: any, info: any)=>{
-        try {
-          const user = context?.req?.user;
-          const result=await fetchPriorityCountAdminAndUser(user);
-          return result; 
-        } catch (error) {
-          return "Error in Fetch Priority Count";
-        }
+    fetchPriorityCount: async (
+      parent: any,
+      args: any,
+      context: any,
+      info: any,
+    ) => {
+      try {
+        const user = context?.req?.user;
+        const result = await fetchPriorityCountAdminAndUser(user);
+        return result;
+      } catch (error) {
+        return "Error in Fetch Priority Count";
+      }
     },
-    fetchDates:async(parent: any, args: any, context: any, info: any)=>{
-        try {
-          const user = context?.req?.user;
-          const result=await fetchDatesForUserAndAdmin(user);
-          return result; 
-        } catch (error) {
-          return "Error in Fetch Priority Count";
-        }
-    }
+    fetchDates: async (parent: any, args: any, context: any, info: any) => {
+      try {
+        const user = context?.req?.user;
+        const result = await fetchDatesForUserAndAdmin(user);
+        return result;
+      } catch (error) {
+        return "Error in Fetch Priority Count";
+      }
+    },
   },
   Task: {
     tasks_dueDate: (parent: any) => parent.tasks_duedate,
@@ -129,6 +145,6 @@ export const resolvers = {
       } catch (error) {
         return "Error in Task Creation";
       }
-    }
+    },
   },
 };

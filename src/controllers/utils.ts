@@ -3,7 +3,7 @@ import { Tasks } from "../models/Task.ts";
 
 export const fetchDatesQuery = async (user) => {
   try {
-    console.log(user);
+    // console.log(user);
     const result =
       await AppDataSource.getRepository(Tasks).createQueryBuilder("tasks");
     if (user?.role === "user") {
