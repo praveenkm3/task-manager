@@ -158,7 +158,7 @@ export async function forgotPassword(req: Request, res: Response){
       email:email
     });
     if(!checkEmail?.email){
-      return res.status(200).json("Not Registered");
+      return res.status(400).json("Not Registered");
     }else{
       const MOTP=Math.floor(1000 + Math.random() * 9000);
       await sendEmail(email,MOTP);
@@ -201,7 +201,7 @@ export async function changePassword(req: Request, res: Response){
         const userPassword=getUser?.password;
         const checkPassword = await bcrypt.compare(password, userPassword);
         if(checkPassword){
-          return res.status(200).json({"message":"SamePasswordEntered"});
+          return res.status(400).json({"message":"SamePasswordEntered"});
         }
         delete req.session.resetOtp;
         const hashPassword = await bcrypt.hash(password, 10);
