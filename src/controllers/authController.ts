@@ -162,7 +162,7 @@ export async function forgotPassword(req: Request, res: Response){
     }else{
       const MOTP=Math.floor(1000 + Math.random() * 9000);
       await sendEmail(email,MOTP);
-       req.session.resetOtp = {
+       req.session.resetOtp= {
         email,
         MOTP,
     expiresAt: Date.now() + 1 * 60 * 1000

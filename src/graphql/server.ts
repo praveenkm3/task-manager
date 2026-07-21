@@ -4,4 +4,4 @@ import { resolvers } from "./resolver.ts";
 
 export const server=new ApolloServer({
     typeDefs,resolvers
-})
+});
