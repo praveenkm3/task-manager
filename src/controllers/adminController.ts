@@ -10,7 +10,7 @@ import {
   SpecificTaskQuery,
  } from "./utils.ts";
 export const addTask: RequestHandler = async (req, res) => {
-  console.log(req.body);
+  // console.log(req.body);
   // return;
   try {
     const { title, description, assigned_user_id, dueDate, priority } =
@@ -114,7 +114,7 @@ export const updateTask: RequestHandler = async (req, res) => {
 };
 export const fetchTasks: RequestHandler = async (req, res) => {
   try {
-    console.log(req.body);
+    // console.log(req.body);
     const {
       filterColumn,
       filterValue,
@@ -147,7 +147,7 @@ export const fetchTasks: RequestHandler = async (req, res) => {
           // console.log("inside date filter");
           const start = filterValue[0].split('T')[0];
           const end = filterValue[1].split('T')[0];
-          console.log(start,end);
+          // console.log(start,end);
           query.andWhere(`tasks.dueDate >= :start AND tasks.dueDate <= :end`,{
               start:start,end:end
           })

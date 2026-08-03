@@ -3,7 +3,7 @@ import { Tasks } from "../models/Task.ts";
 
 export const fetchDatesQuery = async (user) => {
   try {
-    console.log(user);
+    // console.log(user);
     const result =
       await AppDataSource.getRepository(Tasks).createQueryBuilder("tasks");
     if (user?.role === "user") {
@@ -86,15 +86,28 @@ export const fetchStatusTasksQuery = async (user) => {
     const data = await result.getRawMany();
     return data;
   } catch (error) {
-    return "Error at tetching task statuses";
+    return "Error at Fetching task statuses";
   }
 };
-export const SpecificTaskQuery = async (user, id) => {
+export const SpecificTaskQuery = async (user:any, id:any) => {
   try {
     let result = await AppDataSource.getRepository(Tasks)
-      .createQueryBuilder("task")
-      .innerJoinAndSelect("task.createdUser", "createdUser")
-      .innerJoinAndSelect("task.assignedUser", "assignedUser");
+      .createQueryBuilder("tasks")
+      .select(["tasks.taskId tasks_taskId",
+      "tasks.title tasks_title",
+      "tasks.description tasks_description ",
+      "tasks.status tasks_status",
+      "createdUser.email admins_email",
+      "tasks.created_user_id admins_userId",
+      "assignedUser.email users_email",
+      "tasks.assigned_user_id users_userId",
+      "tasks.dueDate tasks_dueDate",
+      "tasks.priority tasks_priority",
+    ])
+
+
+      .innerJoin("tasks.createdUser", "createdUser")
+      .innerJoin("tasks.assignedUser", "assignedUser");
     if (user?.role == "user") {
       result.where("assignedUser.userId=:currentUserId", {
         currentUserId: user.userId,
@@ -105,10 +118,11 @@ export const SpecificTaskQuery = async (user, id) => {
       });
     }
 
-    result.andWhere("task.taskId=:currentTaskId", {
+    result.andWhere("tasks.taskId=:currentTaskId", {
       currentTaskId: parseInt(id as string),
     });
-    const data = await result.getMany();
+    const data = await result.execute(); 
+
     return data;
   } catch (error) {
     return "Error at fetching Specific task";

@@ -23,7 +23,7 @@ export class Tasks extends BaseEntity {
   @Column({ type: "varchar", length: 200, nullable: false })
   description!: string;
 
-  @Column({ type: "varchar", length: 100, default: "pending" })
+  @Column({ type: "varchar", length: 100, default: "TO DO" })
   status!: string;
 
   @ManyToOne(() => Users, { onDelete: "SET NULL", nullable: true })
@@ -38,7 +38,7 @@ export class Tasks extends BaseEntity {
   @JoinColumn({ name: "assigned_user_id" })
   assignedUser!: Users;
 
-  @Column({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
+  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   dueDate!: Date;
 
   @Column({
